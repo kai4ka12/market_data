@@ -1,0 +1,30 @@
+[project]
+name = "market-data"
+version = "0.1.0"
+description = "Real-time crypto market data ingestion and feature pipeline."
+readme = "README.md"
+authors = [
+    { name = "Kaloyan", email = "k.georgiev@tum.de" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "asyncpg>=0.31.0",
+    "fastapi>=0.141.1",
+    "pydantic>=2.13.4",
+    "redis>=8.1.0",
+    "websockets>=17.0.1",
+]
+
+[project.scripts]
+market-data = "market_data:main"
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.0",
+    "pytest>=9.1.1",
+    "ruff>=0.16.2",
+]
