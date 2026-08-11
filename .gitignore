@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# uv / venv
+.venv/
+
+# Environment variables (real secrets/local config — never commit)
+.env
+
+# OS
+.DS_Store
