@@ -18,6 +18,21 @@ import websockets
 from market_data.config import settings
 
 
+class Reconnected:
+    """Marker yielded by connect() right after a dropped connection has
+    been replaced by a fresh one (never yielded for the initial
+    connection). Binance's U/u update IDs don't reset on reconnect — they
+    keep incrementing continuously on Binance's side regardless of which
+    connection is watching. The problem is on OUR side: whatever updates
+    happened during the drop were never observed, so any previously known
+    "last applied update ID" can no longer be trusted to chain correctly
+    with whatever arrives next. Anything tracking sequence continuity (see
+    orderbook_sync.py's OrderBook) must treat this exactly like a cold
+    start — fetch a fresh snapshot and resync — not just keep applying
+    updates as if nothing happened.
+    """
+
+
 class BinanceWebSocketClient:
     """Manages a single WebSocket connection to Binance's combined stream."""
 
@@ -35,12 +50,16 @@ class BinanceWebSocketClient:
             streams.append(f"{lower}@depth@100ms")
         return f"{settings.binance_ws_url}?streams={'/'.join(streams)}"
 
-    async def connect(self) -> AsyncIterator[dict]:
+    async def connect(self) -> AsyncIterator[dict | Reconnected]:
         url = self._build_stream_url()
+        first_connection = True
         while not self._closing:
             try:
                 async with websockets.connect(url) as ws:
                     self._backoff_seconds = 1  # reset once a connection succeeds
+                    if not first_connection:
+                        yield Reconnected()
+                    first_connection = False
                     async for raw_message in ws:
                         yield json.loads(raw_message)
             except websockets.ConnectionClosed:

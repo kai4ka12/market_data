@@ -15,3 +15,6 @@ market-data-pipeline-plan.md
 
 # OS
 .DS_Store
+
+# Throwaway dev/debug tools — not part of the project itself
+scripts/

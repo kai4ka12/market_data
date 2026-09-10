@@ -53,6 +53,20 @@ class OrderBook:
     def synced(self) -> bool:
         return self._synced
 
+    def mark_stale(self) -> None:
+        """Declare the book untrustworthy without touching its contents.
+
+        Call this the moment something invalidates sequence continuity
+        that apply_update() can't detect on its own — a WebSocket
+        reconnect being the main case: the new connection's update IDs
+        won't chain from the old ones, but the book doesn't know that
+        until the next update arrives. Marking it stale immediately means
+        consumers see synced == False right away, and the resync loop's
+        `while not book.synced` actually runs, instead of both waiting for
+        the next depth message to prove the obvious.
+        """
+        self._synced = False
+
     def apply_update(self, update: DepthUpdate) -> None:
         """Apply one live DepthUpdate — safe to call at any point in the
         book's lifecycle; behaves differently depending on where it's up to:
@@ -99,11 +113,19 @@ class OrderBook:
         updates buffered while the snapshot was in flight through the same
         apply_update() logic used for live updates.
         """
-        self._synced = False
+        snapshot = await self._fetch_snapshot()
+
+        if self._synced:
+            # The book became synced through the live bridging path (see
+            # apply_update) while this fetch was in flight — that state is
+            # current and correct. This snapshot is now stale by
+            # comparison; discard it rather than clobbering good data with
+            # an older, no-longer-needed view (or worse, regressing
+            # _last_update_id backward and triggering a spurious "gap").
+            return
+
         self.bids.clear()
         self.asks.clear()
-
-        snapshot = await self._fetch_snapshot()
         self._last_update_id = snapshot["lastUpdateId"]
         for price, qty in snapshot["bids"]:
             self._set_level(self.bids, Decimal(price), Decimal(qty))
