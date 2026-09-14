@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 class TradeEvent(BaseModel):
     symbol: str
+    trade_id: int
     price: Decimal
     quantity: Decimal
     trade_time: datetime

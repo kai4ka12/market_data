@@ -18,6 +18,7 @@ from market_data.models import DepthUpdate, PriceLevel, TradeEvent
 def normalize_trade(data: dict) -> TradeEvent:
     return TradeEvent(
         symbol=data["s"],
+        trade_id=data["t"],
         price=Decimal(data["p"]),
         quantity=Decimal(data["q"]),
         trade_time=datetime.fromtimestamp(data["T"] / 1000, tz=timezone.utc),
